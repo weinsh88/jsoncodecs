@@ -8,7 +8,7 @@ object Json:
   case class JString(value: String) extends Json
   case class JBool(value: Boolean) extends Json
   case class JArray(items: List[Json]) extends Json
-  case class JObject(bindings: Map[String, Json]) extends Json
+  case class JObject(bindings: (String, Json)*) extends Json
   object JNull extends Json
 
 

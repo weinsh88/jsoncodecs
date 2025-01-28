@@ -1,7 +1,6 @@
 package codecs
 
 
-
 object Util: 
   
   /**
@@ -12,12 +11,15 @@ object Util:
   // def parseJson(s: String): Option[Json] = Parser.parseFromString[Json](s).toOption
 
   import Json.*
-  private def render(json: Json): String = json match
+  def render(json: Json): String = json match
     case JNull => "null"
     case JBool(b) => b.toString()
     case JString(s) => s
-    case JNumber(n) => n.toString()
-    case JArray(vs) => vs.map(render).mkString("[", "," ,"]")
-    case JObject(vs) => vs.map((k, v)=> s"${k}:${render(v)}").mkString("{", ", ", "}")
+    case JNumber(n) => n.toString() 
+    case JArray(vs) => vs.map(render).mkString("[", ", " ,"]")
+    case JObject(args @ _*) => args match
+      case Nil => render(JNull)
+      case _ => args.map((k, v) => s"${k}:${render(v)}").mkString("{", ", ", "}")
+    
   
 end Util
