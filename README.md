@@ -1,3 +1,11 @@
+## Codecs for Json Files for Learning and Fun
+
+This project will implement a number of features for functional program design, particularly for better understanding Implicit Type conversions and Abstract Algebraic Types in scala
+
+List of features implemented (by date):
+
+- 1/27 Implemented the basid Json ADT tree, entity decoders and print utils
+
 ## sbt project compiled with Scala 3
 
 ### Usage
