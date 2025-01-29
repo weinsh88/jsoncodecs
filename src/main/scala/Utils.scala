@@ -20,13 +20,25 @@ object Util:
   def render(json: Json): String = json match
     case JNull => "null"
     case JBool(b) => b.toString()
-    case JString(s) => s
+    case JString(s) => fString(s)
     case JNumber(n) => n.toString() 
     case JArray(vs) => vs.map(render).mkString("[", ", " ,"]")
     case JObject(args @ _*) => args match
       case Nil => render(JNull)
-      case _ => args.map((k, v) => s"${k}:${render(v)}").mkString("{", ", ", "}")
-    
+      case _ => args.map((k, v) => s"${{fString(k)}}:${render(v)}").mkString("{", ", ", "}")
+  
+  def fString(s: String): String = 
+    val sb = new StringBuilder
+    sb.append('"')
+    for (alpha <- s) do alpha match {
+      case '"' => sb.append("\\\"")
+      case '\\' => sb.append("\\\\") 
+      case '\r' => sb.append("\\r")
+      case '\n' => sb.append("\\n")
+      case '\t' => sb.append("\\t")
+      case alpha => sb.append(alpha)
+    }
+    sb.append('"').toString
   
   given Facade.SimpleFacade[Json] with
     def jnull: Json = JNull
