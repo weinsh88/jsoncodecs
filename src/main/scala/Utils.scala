@@ -1,5 +1,8 @@
 package codecs
 
+import org.typelevel.jawn.{Parser}
+import org.typelevel.jawn.Facade
+import java.math.MathContext
 
 object Util: 
   
@@ -8,7 +11,10 @@ object Util:
    * @param `s` a valid string
    * @return `Json` type. `None` in the case `s` is not a valid `Json` document
   */
-  // def parseJson(s: String): Option[Json] = Parser.parseFromString[Json](s).toOption
+  def parseJson(s: String): Option[Json] = Parser.parseFromString[Json](s).toOption
+
+  def render[A](data: A)(using encoder: Encoder[A]): String = 
+    render(encoder.encode(data))
 
   import Json.*
   def render(json: Json): String = json match
@@ -21,5 +27,15 @@ object Util:
       case Nil => render(JNull)
       case _ => args.map((k, v) => s"${k}:${render(v)}").mkString("{", ", ", "}")
     
+  
+  given Facade.SimpleFacade[Json] with
+    def jnull: Json = JNull
+    def jarray(vs: List[Json]): Json = JArray(vs)
+    def jtrue: Json = JBool(true)
+    def jfalse: Json = JBool(false)
+    def jnum(s: CharSequence, decIndex: Int, expIndex: Int): Json = JNumber(BigDecimal(s.toString))
+    def jstring(s: CharSequence): Json = JString(s.toString)
+    def jobject(vs: Map[String, Json]): Json = JObject(vs.toSeq*)
+
   
 end Util
