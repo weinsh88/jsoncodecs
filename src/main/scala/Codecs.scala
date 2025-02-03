@@ -63,8 +63,9 @@ trait Decoder[+A]:
       this.decode(json).zip(that.decode(json))
     }
 
-  /** Higher order function for transforming a `Decoder[A]` to `Decoder[B]`
-    * given `A => B`
+  /** Higher order function to map a `Decoder[A]` to `Decoder[B]`
+    * @param f
+    *   explicit valid conversion for `A` to `B`
     */
   def decodeAs[B](f: A => B): Decoder[B] =
     Decoder.fromFunction(json => this.decode(json).map(f))
