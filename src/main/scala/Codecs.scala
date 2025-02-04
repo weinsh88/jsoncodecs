@@ -8,7 +8,8 @@ object Json:
   case class JString(value: String) extends Json
   case class JBool(value: Boolean) extends Json
   case class JArray(items: List[Json]) extends Json
-  case class JObject(bindings: (String, Json)*) extends Json
+  // case class JObject(bindings: (String, Json)*) extends Json
+  case class JObject(bindings: Map[String, Json]) extends Json
   object JNull extends Json
 
 trait Encoder[-A]:
@@ -44,6 +45,39 @@ trait EncoderInstances:
 
 end EncoderInstances
 
+/** Shorthand encoder for json object. The type bounds of the object is
+  * covariant to prevent undefined inherited object traits
+  */
+trait ObjectEncoder[-A] extends Encoder[A]:
+
+  def encode(item: A): JObject
+
+  /** A semigroup `combine` method for two Json monads for serial encoding
+    * @return
+    *
+    * a combiner for `this` and `that` instance of Json Object encoders that
+    * introduces a SemiGroup
+    */
+  def zip[B](that: ObjectEncoder[B]): ObjectEncoder[(A, B)] =
+    ObjectEncoder.fromFunction((a, b) =>
+      JObject(
+        this.encode(a).bindings ++ that.encode(b).bindings
+      )
+    )
+
+end ObjectEncoder
+
+object ObjectEncoder:
+  def fromFunction[A](f: A => JObject): ObjectEncoder[A] =
+    new ObjectEncoder[A] {
+      def encode(item: A): JObject = f(item)
+    }
+
+  def field[A](name: String)(using encoder: Encoder[A]): ObjectEncoder[A] =
+    ObjectEncoder.fromFunction(a => JObject(Map((name -> encoder.encode(a)))))
+
+end ObjectEncoder
+
 trait Decoder[+A]:
   /** @param data
     *   The data to de-serialize
@@ -52,7 +86,8 @@ trait Decoder[+A]:
     */
   def decode(data: Json): Option[A]
 
-  /** Return the applicative of decode, which is a monad Combines 1
+  /** Return the applicative of decode, which is a monad for chaining together
+    * Json decoder instances
     * @param that
     *   any covriant decoder that returns : `Json`
     * @return
@@ -70,12 +105,15 @@ trait Decoder[+A]:
   def decodeAs[B](f: A => B): Decoder[B] =
     Decoder.fromFunction(json => this.decode(json).map(f))
 
+end Decoder
+
 object Decoder extends DecoderInstances:
   def fromFunction[A](f: Json => Option[A]): Decoder[A] = new Decoder[A] {
     def decode(data: Json): Option[A] = f(data)
   }
 
-  /** Convenience method for decoding an instance of type A
+  /** Convenience method for decoding an instance. Throws an exception if Json
+    * is an invalid type or invalid conversion type is explicitly supplied
     */
   def fromPartialFunction[A](pf: PartialFunction[Json, A]): Decoder[A] =
     fromFunction(pf.lift)
@@ -100,7 +138,8 @@ trait DecoderInstances:
     Decoder.fromPartialFunction { case JString(s) => s }
 
   /** Decoder for JSON arrays. It take an implicit parameter of time `Decoder`,
-    * a conditional implicit of `A`. It then `A`
+    * a conditional implicit of `A`. It then recurse `A` until it reaches the
+    * end of a nested block
     */
   given listDecoder[A](using decoder: Decoder[A]): Decoder[List[A]] =
     Decoder.fromFunction {
@@ -113,10 +152,14 @@ trait DecoderInstances:
       case _ => Option.empty[List[A]]
     }
 
-  /** Decoder for JSON objects */
+  /** Decoder for JSON objects. Recursively deserializes the Json object
+    * until it reaches the end of the nested block
+    * @param name
+    *   key associated with deserialized json object
+    */
   def field[A](name: String)(using decoder: Decoder[A]): Decoder[A] =
     Decoder.fromFunction {
-      case JObject(o) if o._1 == name => o._2.decodeAs[A]
-      case _                          => null
+      case JObject(m) if m.contains(name) => m(name).decodeAs[A]
+      case _                              => null
     }
 end DecoderInstances
