@@ -13,11 +13,17 @@ object Json:
   object JNull extends Json
 
 trait Encoder[-A]:
+  /** encodes a value of type `A` to json */
   def encode(data: A): Json
 
-object Encoder extends EncoderInstances:
-  /** Convenience method for initializing an instance of encoder from
+  /** Transforms this from `Encoder[A]` => `Encoder[B]`, given a transformation
+    * function `B` to `A`. This operation is also known as [[contramap]]
     */
+  def encodeAs[B](f: B => A): Encoder[B] =
+    Encoder.fromFunction[B](value => this.encode(f(value)))
+
+object Encoder extends EncoderInstances:
+  /** Convenience method for initializing an instance of encoder from `map` */
   def fromFunction[A](f: A => Json) = new Encoder[A] {
     def encode(value: A): Json = f(value)
   }
@@ -152,8 +158,8 @@ trait DecoderInstances:
       case _ => Option.empty[List[A]]
     }
 
-  /** Decoder for JSON objects. Recursively deserializes the Json object
-    * until it reaches the end of the nested block
+  /** Decoder for JSON objects. Recursively deserializes the Json object until
+    * it reaches the end of the nested block
     * @param name
     *   key associated with deserialized json object
     */
